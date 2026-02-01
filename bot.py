@@ -3,24 +3,33 @@ import google.generativeai as genai
 import os
 import time
 
-# 1. Setup Keys (Railway se lega)
+# 1. SETUP (Railway Variables)
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
 
+# Connect to Telegram & Google
 bot = telebot.TeleBot(BOT_TOKEN)
 genai.configure(api_key=GEMINI_KEY)
-
-# 2. Model Setup (Gemini 1.5 Flash - Best for Audio)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
+# 2. WELCOME MESSAGE (Professional Style)
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.reply_to(message, "🔥 Fusion Ultra Bot Ready!\nKoi bhi Song 🎵 ya Audio 🎤 bhejo, main lyrics nikal dunga.")
+    user_name = message.from_user.first_name
+    welcome_text = (
+        f"👋 **Hello {user_name}!**\n\n"
+        f"main hoon **Fusion Lyrics Bot** 🤖\n"
+        f"Mujhe koi bhi Song 🎵 ya Voice Note 🎤 bhejo, main turant Lyrics likh kar dunga.\n\n"
+        f"🚀 *Powered by Fusion Clouds*"
+    )
+    bot.reply_to(message, welcome_text, parse_mode="Markdown")
 
+# 3. MAIN LOGIC (Gemini AI)
 @bot.message_handler(content_types=['audio', 'voice'])
 def handle_audio(message):
     try:
-        status = bot.reply_to(message, "🧠 Gaana sun raha hoon (Analyzing with Gemini)...")
+        # User ko batao kaam shuru hai
+        status_msg = bot.reply_to(message, "🎧 **Sun raha hoon...** (Processing Beats & Vocals) ⏳")
 
         # 1. Download File
         file_id = message.voice.file_id if message.content_type == 'voice' else message.audio.file_id
@@ -28,33 +37,45 @@ def handle_audio(message):
         downloaded_file = bot.download_file(file_info.file_path)
 
         # 2. Save Temporarily
-        file_path = "song.mp3"
+        file_path = f"user_{message.chat.id}.mp3"
         with open(file_path, 'wb') as f:
             f.write(downloaded_file)
 
-        # 3. Send to Gemini
-        # Upload file
+        # 3. Send to Google Gemini
+        # Upload
         audio_file = genai.upload_file(path=file_path)
         
-        # Wait for processing (Important for Google)
+        # Wait for Google to process audio
         while audio_file.state.name == "PROCESSING":
             time.sleep(1)
             audio_file = genai.get_file(audio_file.name)
 
-        # Ask for Lyrics
-        response = model.generate_content([
-            "Listen to this audio. Transcribe the lyrics exactly line by line. Do not describe the music, just give me the text.",
-            audio_file
-        ])
+        # Generate Lyrics
+        prompt = "Listen to this audio. Extract the lyrics exactly line by line. Ignore instrumental parts. Output ONLY the lyrics."
+        response = model.generate_content([prompt, audio_file])
         
-        # 4. Reply
-        bot.reply_to(message, f"📝 **Lyrics:**\n\n{response.text}")
+        # 4. Final Formatting (Branding Added)
+        lyrics_text = response.text
+        if len(lyrics_text) > 4000:
+            lyrics_text = lyrics_text[:4000] + "...(Lyrics too long)"
+
+        final_reply = (
+            f"🎶 **LYRICS GENERATED:**\n\n"
+            f"{lyrics_text}\n\n"
+            f"➖➖➖➖➖➖➖➖\n"
+            f"🔥 **Want to make a bot like this?**\n"
+            f"Contact: @FusionClouds | Fiverr: lyricsworld9949"
+        )
+
+        # Send Reply
+        bot.reply_to(message, final_reply)
 
         # Cleanup
         os.remove(file_path)
-        bot.delete_message(message.chat.id, status.message_id)
+        bot.delete_message(message.chat.id, status_msg.message_id)
 
     except Exception as e:
-        bot.reply_to(message, f"❌ Error: {e}")
+        bot.reply_to(message, f"❌ Oops! Kuch gadbad hui.\nError: {e}")
 
+# Keep Running
 bot.infinity_polling()
