@@ -12,13 +12,13 @@ bot = telebot.TeleBot(BOT_TOKEN)
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 2. WELCOME MESSAGE (Professional Style)
+# 2. WELCOME MESSAGE
 @bot.message_handler(commands=['start'])
 def welcome(message):
     user_name = message.from_user.first_name
     welcome_text = (
         f"👋 **Hello {user_name}!**\n\n"
-        f"main hoon **Fusion Lyrics Bot** 🤖\n"
+        f"Main hoon **Fusion Lyrics Bot** 🤖\n"
         f"Mujhe koi bhi Song 🎵 ya Voice Note 🎤 bhejo, main turant Lyrics likh kar dunga.\n\n"
         f"🚀 *Powered by Fusion Clouds*"
     )
@@ -54,7 +54,7 @@ def handle_audio(message):
         prompt = "Listen to this audio. Extract the lyrics exactly line by line. Ignore instrumental parts. Output ONLY the lyrics."
         response = model.generate_content([prompt, audio_file])
         
-        # 4. Final Formatting (Branding Added)
+        # 4. Final Formatting (Corrected Links)
         lyrics_text = response.text
         if len(lyrics_text) > 4000:
             lyrics_text = lyrics_text[:4000] + "...(Lyrics too long)"
@@ -63,12 +63,13 @@ def handle_audio(message):
             f"🎶 **LYRICS GENERATED:**\n\n"
             f"{lyrics_text}\n\n"
             f"➖➖➖➖➖➖➖➖\n"
-            f"🔥 **Want to make a bot like this?**\n"
-            f"Contact: @FusionClouds | Fiverr: lyricsworld9949"
+            f"🚀 **Power up your Channel:**\n"
+            f"📺 [Subscribe Fusion Clouds](https://youtube.com/@fusionclouds)\n"
+            f"💼 [Hire Me on Fiverr](https://www.fiverr.com/s/gDpmW3A)"
         )
 
         # Send Reply
-        bot.reply_to(message, final_reply)
+        bot.reply_to(message, final_reply, parse_mode="Markdown")
 
         # Cleanup
         os.remove(file_path)
