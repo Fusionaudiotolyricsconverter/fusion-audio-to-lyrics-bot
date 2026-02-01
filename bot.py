@@ -3,32 +3,31 @@ import google.generativeai as genai
 import os
 import time
 
-# 1. SETUP
+# 1. SETUP (Hardcoded Key)
 GEMINI_KEY = "AIzaSyBojK1kFIvvzKbfIGjcgn5i_vAPaDg0_8Y"
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 bot = telebot.TeleBot(BOT_TOKEN)
 genai.configure(api_key=GEMINI_KEY)
 
-# Using the standard reliable model
+# 2. MODEL SETUP (Standard Flash Model)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 2. WELCOME
+# 3. WELCOME
 @bot.message_handler(commands=['start'])
 def welcome(message):
     try:
-        user_name = message.from_user.first_name
-        bot.reply_to(message, f"👋 **Hello {user_name}!**\n\nMain hoon **Fusion Lyrics Bot** 🤖\nSong bhejo, main Lyrics likh dunga!\n\n🚀 *Powered by Fusion Clouds*", parse_mode="Markdown")
+        bot.reply_to(message, "👋 **Fusion Bot Ready!**\n\nAudio bhejo, main Lyrics nikal dunga. 🎵", parse_mode="Markdown")
     except:
-        bot.reply_to(message, "Fusion Bot Ready! Send Audio.")
+        pass
 
-# 3. MAIN LOGIC
+# 4. MAIN LOGIC
 @bot.message_handler(content_types=['audio', 'voice'])
 def handle_audio(message):
     try:
         status_msg = bot.reply_to(message, "🎧 **Sun raha hoon...** (Processing...) ⏳")
 
-        # File Download
+        # Download
         file_id = message.voice.file_id if message.content_type == 'voice' else message.audio.file_id
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
@@ -38,28 +37,26 @@ def handle_audio(message):
         with open(file_path, 'wb') as f:
             f.write(downloaded_file)
 
-        # Gemini Upload
+        # Gemini Process
         audio_file = genai.upload_file(path=file_path)
         
-        # Wait for Ready State
+        # Wait for Ready
         while audio_file.state.name == "PROCESSING":
             time.sleep(1)
             audio_file = genai.get_file(audio_file.name)
 
         # Generate
         response = model.generate_content([
-            "Listen to this audio. Output ONLY the lyrics line by line. Do not write extra text.",
+            "Listen to this audio. Transcribe lyrics line by line. Output ONLY the lyrics.",
             audio_file
         ])
         
-        # Reply with Branding
+        # Reply
         final_reply = (
-            f"🎶 **LYRICS GENERATED:**\n\n"
+            f"🎶 **LYRICS:**\n\n"
             f"{response.text[:3500]}\n\n"
             f"➖➖➖➖➖➖➖➖\n"
-            f"🚀 **Fusion Clouds:**\n"
-            f"📺 [Subscribe Channel](https://youtube.com/@fusionclouds)\n"
-            f"💼 [Hire Me](https://www.fiverr.com/s/gDpmW3A)"
+            f"🚀 [Subscribe Fusion Clouds](https://youtube.com/@fusionclouds)"
         )
         bot.reply_to(message, final_reply, parse_mode="Markdown")
 
