@@ -3,7 +3,7 @@ import google.generativeai as genai
 import os
 import time
 
-# 1. SETUP (Corrected Model Name & Key)
+# 1. SETUP (Direct Key + Corrected Model)
 GEMINI_KEY = "AIzaSyBojK1kFIvvzKbfIGjcgn5i_vAPaDg0_8Y"
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
@@ -11,20 +11,23 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
 genai.configure(api_key=GEMINI_KEY)
 
-# CHANGE: Using specific version 'gemini-1.5-flash-001' to fix 404 error
+# FIX: Using the specific version ID to stop the Crash/404 Error
 model = genai.GenerativeModel('gemini-1.5-flash-001')
 
 # 2. WELCOME MESSAGE
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    user_name = message.from_user.first_name
-    welcome_text = (
-        f"👋 **Hello {user_name}!**\n\n"
-        f"Main hoon **Fusion Lyrics Bot** 🤖\n"
-        f"Mujhe koi bhi Song 🎵 ya Voice Note 🎤 bhejo, main turant Lyrics likh kar dunga.\n\n"
-        f"🚀 *Powered by Fusion Clouds*"
-    )
-    bot.reply_to(message, welcome_text, parse_mode="Markdown")
+    try:
+        user_name = message.from_user.first_name
+        welcome_text = (
+            f"👋 **Hello {user_name}!**\n\n"
+            f"Main hoon **Fusion Lyrics Bot** 🤖\n"
+            f"Mujhe koi bhi Song 🎵 ya Voice Note 🎤 bhejo, main turant Lyrics likh kar dunga.\n\n"
+            f"🚀 *Powered by Fusion Clouds*"
+        )
+        bot.reply_to(message, welcome_text, parse_mode="Markdown")
+    except Exception as e:
+        bot.reply_to(message, "Hello! I am ready.")
 
 # 3. MAIN LOGIC
 @bot.message_handler(content_types=['audio', 'voice'])
@@ -74,7 +77,8 @@ def handle_audio(message):
         bot.delete_message(message.chat.id, status_msg.message_id)
 
     except Exception as e:
+        # Error handling taaki user ko pata chale kya hua
         bot.reply_to(message, f"❌ Oops! Error: {e}")
 
+# Start Bot
 bot.infinity_polling()
-
