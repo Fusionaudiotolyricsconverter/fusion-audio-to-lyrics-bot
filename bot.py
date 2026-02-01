@@ -3,14 +3,16 @@ import google.generativeai as genai
 import os
 import time
 
-# 1. SETUP (Direct Key Laga Di Hai)
+# 1. SETUP (Corrected Model Name & Key)
 GEMINI_KEY = "AIzaSyBojK1kFIvvzKbfIGjcgn5i_vAPaDg0_8Y"
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 # Connect
 bot = telebot.TeleBot(BOT_TOKEN)
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+
+# CHANGE: Using specific version 'gemini-1.5-flash-001' to fix 404 error
+model = genai.GenerativeModel('gemini-1.5-flash-001')
 
 # 2. WELCOME MESSAGE
 @bot.message_handler(commands=['start'])
@@ -75,3 +77,4 @@ def handle_audio(message):
         bot.reply_to(message, f"❌ Oops! Error: {e}")
 
 bot.infinity_polling()
+
