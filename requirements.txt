@@ -1,0 +1,4 @@
+pyTelegramBotAPI
+openai-whisper
+ffmpeg-python
+torch
