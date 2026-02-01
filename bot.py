@@ -3,11 +3,11 @@ import google.generativeai as genai
 import os
 import time
 
-# 1. SETUP (Railway Variables)
+# 1. SETUP (Direct Key Laga Di Hai)
+GEMINI_KEY = "AIzaSyBojK1kFIvvzKbfIGjcgn5i_vAPaDg0_8Y"
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
 
-# Connect to Telegram & Google
+# Connect
 bot = telebot.TeleBot(BOT_TOKEN)
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
@@ -24,28 +24,26 @@ def welcome(message):
     )
     bot.reply_to(message, welcome_text, parse_mode="Markdown")
 
-# 3. MAIN LOGIC (Gemini AI)
+# 3. MAIN LOGIC
 @bot.message_handler(content_types=['audio', 'voice'])
 def handle_audio(message):
     try:
-        # User ko batao kaam shuru hai
         status_msg = bot.reply_to(message, "🎧 **Sun raha hoon...** (Processing Beats & Vocals) ⏳")
 
-        # 1. Download File
+        # Download File
         file_id = message.voice.file_id if message.content_type == 'voice' else message.audio.file_id
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
 
-        # 2. Save Temporarily
+        # Save Temporarily
         file_path = f"user_{message.chat.id}.mp3"
         with open(file_path, 'wb') as f:
             f.write(downloaded_file)
 
-        # 3. Send to Google Gemini
-        # Upload
+        # Gemini Process
         audio_file = genai.upload_file(path=file_path)
         
-        # Wait for Google to process audio
+        # Wait for processing
         while audio_file.state.name == "PROCESSING":
             time.sleep(1)
             audio_file = genai.get_file(audio_file.name)
@@ -54,7 +52,7 @@ def handle_audio(message):
         prompt = "Listen to this audio. Extract the lyrics exactly line by line. Ignore instrumental parts. Output ONLY the lyrics."
         response = model.generate_content([prompt, audio_file])
         
-        # 4. Final Formatting (Corrected Links)
+        # Format Reply
         lyrics_text = response.text
         if len(lyrics_text) > 4000:
             lyrics_text = lyrics_text[:4000] + "...(Lyrics too long)"
@@ -67,8 +65,6 @@ def handle_audio(message):
             f"📺 [Subscribe Fusion Clouds](https://youtube.com/@fusionclouds)\n"
             f"💼 [Hire Me on Fiverr](https://www.fiverr.com/s/gDpmW3A)"
         )
-
-        # Send Reply
         bot.reply_to(message, final_reply, parse_mode="Markdown")
 
         # Cleanup
@@ -76,7 +72,6 @@ def handle_audio(message):
         bot.delete_message(message.chat.id, status_msg.message_id)
 
     except Exception as e:
-        bot.reply_to(message, f"❌ Oops! Kuch gadbad hui.\nError: {e}")
+        bot.reply_to(message, f"❌ Oops! Error: {e}")
 
-# Keep Running
 bot.infinity_polling()
