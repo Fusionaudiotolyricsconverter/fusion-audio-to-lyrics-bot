@@ -1,48 +1,57 @@
 import telebot
-import speech_recognition as sr
+import google.generativeai as genai
 import os
-from pydub import AudioSegment
+import time
 
-# 1. Setup
+# 1. Setup Keys (Railway se lega)
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-bot = telebot.TeleBot(BOT_TOKEN)
-r = sr.Recognizer()
+GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
 
-# 2. Start Message
+bot = telebot.TeleBot(BOT_TOKEN)
+genai.configure(api_key=GEMINI_KEY)
+
+# 2. Model Setup (Gemini 1.5 Flash - Best for Audio)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.reply_to(message, "🔥 Ricky Bhai! Plan B Ready hai. Audio bhejo!")
+    bot.reply_to(message, "🔥 Fusion Ultra Bot Ready!\nKoi bhi Song 🎵 ya Audio 🎤 bhejo, main lyrics nikal dunga.")
 
-# 3. Audio Processing (Google Logic)
-@bot.message_handler(content_types=['voice', 'audio'])
+@bot.message_handler(content_types=['audio', 'voice'])
 def handle_audio(message):
     try:
-        status = bot.reply_to(message, "🎧 Sun raha hoon (Converting)...")
+        status = bot.reply_to(message, "🧠 Gaana sun raha hoon (Analyzing with Gemini)...")
 
-        # File Download
+        # 1. Download File
         file_id = message.voice.file_id if message.content_type == 'voice' else message.audio.file_id
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
 
-        # Save OGG
-        with open("temp.ogg", "wb") as f:
+        # 2. Save Temporarily
+        file_path = "song.mp3"
+        with open(file_path, 'wb') as f:
             f.write(downloaded_file)
 
-        # Convert to WAV (Zaroori hai)
-        sound = AudioSegment.from_file("temp.ogg")
-        sound.export("temp.wav", format="wav")
+        # 3. Send to Gemini
+        # Upload file
+        audio_file = genai.upload_file(path=file_path)
+        
+        # Wait for processing (Important for Google)
+        while audio_file.state.name == "PROCESSING":
+            time.sleep(1)
+            audio_file = genai.get_file(audio_file.name)
 
-        # Transcribe via Google
-        with sr.AudioFile("temp.wav") as source:
-            audio_data = r.record(source)
-            # Hindi/English Mix support
-            text = r.recognize_google(audio_data, language="en-IN")
-
-        bot.reply_to(message, f"📝 **Lyrics:**\n\n{text}")
+        # Ask for Lyrics
+        response = model.generate_content([
+            "Listen to this audio. Transcribe the lyrics exactly line by line. Do not describe the music, just give me the text.",
+            audio_file
+        ])
+        
+        # 4. Reply
+        bot.reply_to(message, f"📝 **Lyrics:**\n\n{response.text}")
 
         # Cleanup
-        os.remove("temp.ogg")
-        os.remove("temp.wav")
+        os.remove(file_path)
         bot.delete_message(message.chat.id, status.message_id)
 
     except Exception as e:
